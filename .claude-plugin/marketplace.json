@@ -1,0 +1,5 @@
+{
+  "name": "memory-band",
+  "owner": { "name": "Joe Houghton" },
+  "plugins": [{ "name": "memory-band", "source": "./" }]
+}

@@ -1,0 +1,7 @@
+{
+  "name": "memory-band",
+  "version": "0.1.0",
+  "description": "Shows memory, CPU and GPU load as percentages above the prompt box, turning yellow at the suggested maximum (macOS).",
+  "types": "./types/index.d.ts",
+  "license": "MIT"
+}
