@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { Register } from 'claude-code'
 
 /** How often the figures are read, in milliseconds. */
-const REFRESH_MS = 5000
+const REFRESH_MS = 10000
 /** Suggested ceiling in percent: from here a figure turns yellow. */
 const MAX_SUGGESTED = 80
 /** From this load upward a "!" is added, so the warning does not rely on colour alone. */
@@ -28,11 +28,14 @@ export function parseMemory(stdout: string): number | null {
   return m ? clamp(100 - Number(m[1])) : null
 }
 
-/** `top -l 2`: the second sample's "CPU usage: ... NN% idle". Load = 100 minus idle. */
+/**
+ * `iostat -n 0 -c 2 -w 1`: the last line's `us sy id` columns; load = 100 minus idle.
+ * (`top` was tried first and used about 95% of a core on every sample, so it caused the load it measured.)
+ */
 export function parseCpu(stdout: string): number | null {
-  const lines = stdout.split('\n').filter(l => /CPU usage/i.test(l))
-  const m = /([\d.]+)%\s*idle/i.exec(lines[lines.length - 1] ?? '')
-  return m ? clamp(Math.round(100 - Number(m[1]))) : null
+  const rows = stdout.trim().split('\n').filter(l => /^\s*\d+\s+\d+\s+\d+\s/.test(l))
+  const m = /^\s*\d+\s+\d+\s+(\d+)\s/.exec(rows[rows.length - 1] ?? '')
+  return m ? clamp(100 - Number(m[1])) : null
 }
 
 /** `ioreg -c AGXAccelerator`: "Device Utilization %"=NN (Apple GPUs). */
@@ -78,7 +81,7 @@ export const register: Register = on => {
     const refresh = async () => {
       const [mem, cpu, gpu] = await Promise.all([
         run(['/usr/bin/memory_pressure'], 8000),
-        run(['/usr/bin/top', '-l', '2', '-n', '0', '-s', '1'], 10000),
+        run(['/usr/sbin/iostat', '-n', '0', '-c', '2', '-w', '1'], 10000),
         run(['/usr/sbin/ioreg', '-r', '-d', '1', '-w0', '-c', 'AGXAccelerator'], 5000),
       ])
       const m = parseMemory(mem)
